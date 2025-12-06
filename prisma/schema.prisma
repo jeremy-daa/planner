@@ -1,0 +1,119 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  avatar    String?
+  color     String?  // hex code
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assignedChoreInstances ChoreInstance[]
+  
+  sentTransfers     TransferRequest[] @relation("FromUser")
+  receivedTransfers TransferRequest[] @relation("ToUser")
+
+  paidExpenses      Expense[] @relation("Payer")
+  expenseSplits     ExpenseSplit[] @relation("Debtor")
+}
+
+model Chore {
+  id              String   @id @default(uuid())
+  title           String
+  description     String?
+  icon            String   // Lucide icon name
+  frequency       Frequency
+  customInterval  Int?     // For CUSTOM freq, e.g. every X days
+  difficulty      Int      // Points
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  assigneeIds     String[] // User IDs in rotation
+  lastAssigneeIdx Int      @default(0)
+
+  instances       ChoreInstance[]
+}
+
+model ChoreInstance {
+  id             String   @id @default(uuid())
+  choreId        String
+  chore          Chore    @relation(fields: [choreId], references: [id])
+  assignedUserId String?
+  assignedUser   User?    @relation(fields: [assignedUserId], references: [id])
+  dueDate        DateTime
+  completedAt    DateTime?
+  status         ChoreStatus @default(PENDING) // PENDING, COMPLETED, MISSED
+
+  transferRequests TransferRequest[]
+}
+
+model TransferRequest {
+  id              String   @id @default(uuid())
+  fromUserId      String
+  fromUser        User     @relation("FromUser", fields: [fromUserId], references: [id])
+  toUserId        String
+  toUser          User     @relation("ToUser", fields: [toUserId], references: [id])
+  choreInstanceId String
+  choreInstance   ChoreInstance @relation(fields: [choreInstanceId], references: [id])
+  status          TransferStatus @default(PENDING) // PENDING, ACCEPTED, REJECTED
+  createdAt       DateTime @default(now())
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  description String
+  amount      Float
+  category    String   @default("General") // e.g. Groceries, Utilities
+  date        DateTime @default(now())
+  isRecurring Boolean  @default(false)
+  payerId     String
+  payer       User     @relation("Payer", fields: [payerId], references: [id])
+  
+  splits      ExpenseSplit[]
+}
+
+model Budget {
+  id        String   @id @default(uuid())
+  category  String   @unique
+  amount    Float    // Monthly limit
+  icon      String?  // Lucide icon name
+  color     String?  // Hex color
+}
+
+model ExpenseSplit {
+  id        String   @id @default(uuid())
+  expenseId String
+  expense   Expense  @relation(fields: [expenseId], references: [id])
+  debtorId  String
+  debtor    User     @relation("Debtor", fields: [debtorId], references: [id])
+  amount    Float
+}
+
+enum Frequency {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum ChoreStatus {
+  PENDING
+  COMPLETED
+  MISSED
+}
+
+enum TransferStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}

@@ -1,0 +1,40 @@
+
+> planner@0.1.0 build
+> next build
+
+   Γû▓ Next.js 16.0.7 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully in 6.9s
+   Running TypeScript ...
+   Collecting page data using 19 workers ...
+   Generating static pages using 19 workers (0/4) ...
+Error occurred prerendering page "/". Read more: https://nextjs.org/docs/messages/prerender-error
+Error [PrismaClientInitializationError]: 
+Invalid `prisma.user.findMany()` invocation:
+
+
+error: Error validating datasource `db`: the URL must start with the protocol `postgresql://` or `postgres://`.
+
+To use a URL with protocol `prisma://`, you need to either enable Accelerate or the Data Proxy.
+Enable Accelerate via `prisma generate --accelerate` or the Data Proxy via `prisma generate --data-proxy.`
+
+More information about Data Proxy: https://pris.ly/d/data-proxy
+
+  -->  schema.prisma:3
+   | 
+ 2 |   provider = "postgresql"
+ 3 |   url      = env("DATABASE_URL")
+   | 
+
+Validation Error Count: 1
+    at <unknown> (-->  schema.prisma:3)
+    at async i (D:\Planner\planner\.next\server\chunks\ssr\[root-of-the-server]__a00a0c6a._.js:23:692)
+    at async e (D:\Planner\planner\.next\server\chunks\ssr\[root-of-the-server]__aa266bfd._.js:1:1227) {
+  clientVersion: '5.19.1',
+  errorCode: undefined,
+  digest: '2132986386'
+}
+Export encountered an error on /page: /, exiting the build.
+ Γ¿» Next.js build worker exited with code: 1 and signal: null

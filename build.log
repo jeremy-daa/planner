@@ -1,0 +1,107 @@
+
+> planner@0.1.0 build
+> next build
+
+   Γû▓ Next.js 16.0.7 (Turbopack)
+   - Environments: .env
+
+   Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build failed with 4 errors:
+./app/providers.tsx:3:1
+Module not found: Can't resolve '@tanstack/react-query'
+  1 | 'use client'
+  2 |
+> 3 | import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  4 | import { useState } from 'react'
+  5 | import { User } from '@prisma/client'
+  6 | import { createContext, useContext, useEffect } from 'react'
+
+
+
+Import trace:
+  Server Component:
+    ./app/providers.tsx
+    ./app/layout.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./components/dashboard.tsx:4:1
+Module not found: Can't resolve '@tanstack/react-query'
+  2 |
+  3 | import { useCurrentUser } from "@/app/providers"
+> 4 | import { useQuery } from "@tanstack/react-query"
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  5 | import { getDashboardData, respondToTransfer } from "@/app/actions/actions"
+  6 | import { ChoreCard } from "./chore-card"
+  7 | import { UserSwitcher } from "./user-switcher"
+
+
+
+Import trace:
+  Server Component:
+    ./components/dashboard.tsx
+    ./app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./components/chore-card.tsx:6:1
+Module not found: Can't resolve 'framer-motion'
+  4 | import { Card, CardContent } from '@/components/ui/card'
+  5 | import * as Icons from 'lucide-react'
+> 6 | import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion'
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  7 | import { useState } from 'react'
+  8 | import { toggleTask, requestTransfer } from '@/app/actions/actions'
+  9 | import confetti from 'canvas-confetti'
+
+
+
+Import traces:
+  Client Component Browser:
+    ./components/chore-card.tsx [Client Component Browser]
+    ./components/dashboard.tsx [Client Component Browser]
+    ./components/dashboard.tsx [Server Component]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./components/chore-card.tsx [Client Component SSR]
+    ./components/dashboard.tsx [Client Component SSR]
+    ./components/dashboard.tsx [Server Component]
+    ./app/page.tsx [Server Component]
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+./components/dashboard.tsx:9:1
+Module not found: Can't resolve 'framer-motion'
+   7 | import { UserSwitcher } from "./user-switcher"
+   8 | import { User } from "@prisma/client"
+>  9 | import { motion, AnimatePresence } from "framer-motion"
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  10 | import { Check, X, Bell, Calendar as CalendarIcon } from "lucide-react"
+  11 | import { Card, CardContent } from "@/components/ui/card"
+  12 | import { Button } from "@/components/ui/button"
+
+
+
+Import trace:
+  Server Component:
+    ./components/dashboard.tsx
+    ./app/page.tsx
+
+https://nextjs.org/docs/messages/module-not-found
+
+
+    at <unknown> (./app/providers.tsx:3:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./components/dashboard.tsx:4:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./components/chore-card.tsx:6:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
+    at <unknown> (./components/dashboard.tsx:9:1)
+    at <unknown> (https://nextjs.org/docs/messages/module-not-found)
