@@ -5,13 +5,15 @@ import { revalidatePath } from 'next/cache'
 
 export async function updateUserProfile(id: string, data: {
     avatar?: string,
-    color?: string
+    color?: string,
+    notifTime?: string
 }) {
     await prisma.user.update({
         where: { id },
         data: {
             avatar: data.avatar,
-            color: data.color
+            color: data.color,
+            notifTime: data.notifTime
         }
     })
     revalidatePath('/')

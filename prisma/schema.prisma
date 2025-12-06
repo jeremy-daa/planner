@@ -12,6 +12,7 @@ model User {
   name      String
   avatar    String?
   color     String?  // hex code
+  notifTime String?  @default("09:00") // Preferred time for daily reminders (HH:MM)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

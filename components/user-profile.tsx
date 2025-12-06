@@ -62,6 +62,8 @@ export function UserProfile() {
     const { user, setUser } = useCurrentUser()
     const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || AVATAR_OPTIONS[0])
     const [selectedColor, setSelectedColor] = useState(user?.color || COLOR_OPTIONS[0])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [notifTime, setNotifTime] = useState((user as any)?.notifTime || '09:00')
     const [loading, setLoading] = useState(false)
 
     if (!user) return <div className="p-4 text-center text-gray-500">Please select a user first to edit profile.</div>
@@ -71,10 +73,12 @@ export function UserProfile() {
         try {
             await updateUserProfile(user!.id, {
                 avatar: selectedAvatar,
-                color: selectedColor
+                color: selectedColor,
+                notifTime
             })
             // Update local state
-            setUser({ ...user!, avatar: selectedAvatar, color: selectedColor })
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            setUser({ ...user!, avatar: selectedAvatar, color: selectedColor, notifTime } as any)
             toast.success('Profile updated!')
         } catch (e) {
             toast.error('Failed to update profile')
@@ -126,6 +130,19 @@ export function UserProfile() {
                                 {selectedColor === c && <Check className="text-white drop-shadow-md" size={18} />}
                             </div>
                         ))}
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-400">Daily Reminder Time</label>
+                    <div className="flex items-center gap-4">
+                         <input 
+                            type="time" 
+                            className="bg-zinc-900 border border-white/10 rounded-md p-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={notifTime}
+                            onChange={(e) => setNotifTime(e.target.value)}
+                         />
+                         <span className="text-xs text-gray-500">We'll alert you about pending tasks at this time.</span>
                     </div>
                 </div>
 
