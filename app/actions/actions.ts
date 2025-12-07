@@ -2,10 +2,17 @@
 
 import { prisma } from '@/app/lib/prisma'
 import { revalidatePath } from 'next/cache'
-import { addDays, addWeeks, addMonths } from 'date-fns'
+import { addDays, addWeeks, addMonths, differenceInCalendarDays } from 'date-fns'
 
 export async function getUsers() {
     return await prisma.user.findMany()
+}
+
+export async function getLeaderboard() {
+    return await prisma.user.findMany({
+        orderBy: { points: 'desc' },
+        take: 10
+    })
 }
 
 export async function getDashboardData(userId: string) {
@@ -63,7 +70,7 @@ export async function toggleTask(instanceId: string, completed: boolean) {
     if (!instance) throw new Error('Task not found')
 
     if (completed) {
-        // Mark completed
+        // 1. Mark completed
         await prisma.choreInstance.update({
             where: { id: instanceId },
             data: { 
@@ -72,44 +79,63 @@ export async function toggleTask(instanceId: string, completed: boolean) {
             }
         })
 
-        // Generate next instance
-        // Calculate next date based on frequency
+        // 2. Gamification Logic
+        if (instance.assignedUserId) {
+            const user = await prisma.user.findUnique({ where: { id: instance.assignedUserId } })
+            if (user) {
+                const pointsToAdd = instance.chore.difficulty
+                const newPoints = user.points + pointsToAdd
+                const newLevel = Math.floor(newPoints / 500) + 1 // 500 points per level
+
+                // Streak Logic
+                const today = new Date()
+                const last = user.lastCompletedAt
+                let newStreak = user.streak
+
+                if (!last) {
+                    newStreak = 1
+                } else {
+                    const diff = differenceInCalendarDays(today, last)
+                    if (diff === 1) {
+                        newStreak += 1
+                    } else if (diff > 1) {
+                        newStreak = 1
+                    }
+                    // if diff === 0 (same day), streak remains same
+                }
+
+                await prisma.user.update({
+                    where: { id: user.id },
+                    data: {
+                        points: newPoints,
+                        level: newLevel,
+                        streak: newStreak,
+                        lastCompletedAt: new Date()
+                    }
+                })
+            }
+        }
+
+        // 3. Generate next instance
         let nextDate = new Date(instance.dueDate)
         const freq = instance.chore.frequency
-        
-        // Simple logic: next due date is relative to *previous due date* (strict interval)
-        // or *completion date*? Prompt says "Recurrence Logic: When a task is marked 'Done', the system must automatically generate the *next* instance based on its frequency".
-        // Usually strict intervals prefer due date + frequency.
-        // But if overdue, avoid scheduling in past?
-        // Method: based on today?
-        // Let's use today + frequency for "fresh start" feeling or strict schedule?
-        // Let's stick to strict schedule (dueDate + freq) unless it's way behind? 
-        // For simplicity: Today + Frequency (so it doesn't pile up if you missed a week).
-        
         const baseDate = new Date() // Now
 
         if (freq === 'DAILY') nextDate = addDays(baseDate, 1)
         else if (freq === 'WEEKLY') nextDate = addWeeks(baseDate, 1)
+        else if (freq === 'BIWEEKLY') nextDate = addWeeks(baseDate, 2)
         else if (freq === 'MONTHLY') nextDate = addMonths(baseDate, 1)
-        
+        else if (freq === 'QUARTERLY') nextDate = addMonths(baseDate, 3)
+        else if (freq === 'YEARLY') nextDate = addMonths(baseDate, 12)
+        else if (freq === 'CUSTOM' && instance.chore.customInterval) nextDate = addDays(baseDate, instance.chore.customInterval)
+
         if (freq !== 'CUSTOM' || (freq === 'CUSTOM' && instance.chore.customInterval)) {
-             // Calculate next assignee
-             // Default: keep same user
              let nextAssignee = instance.assignedUserId
              
-             // Rotation logic
-             // We need to fetch the fresh chore data including assigneeIds to be safe, 
-             // but 'instance.chore' is included. Does it have the new fields?
-             // Prisma include does fetch scalar arrays by default.
-             
+             // Rotation Logic
              const assigneeIds = instance.chore.assigneeIds
              if (assigneeIds && assigneeIds.length > 1) {
-                 // Find current index
-                 // We should use the 'lastAssigneeIdx' from the Chore model to be robust against swaps?
-                 // Or just find current user in list.
-                 // Let's use current user in list for simplicity.
                  const currentIdx = instance.assignedUserId ? assigneeIds.indexOf(instance.assignedUserId) : -1
-                 
                  let nextIdx = 0
                  if (currentIdx !== -1) {
                      nextIdx = (currentIdx + 1) % assigneeIds.length
@@ -117,21 +143,11 @@ export async function toggleTask(instanceId: string, completed: boolean) {
                  nextAssignee = assigneeIds[nextIdx]
              }
 
-             // Calculate Date
-             const baseDate = new Date()
-             if (freq === 'DAILY') nextDate = addDays(baseDate, 1)
-             else if (freq === 'WEEKLY') nextDate = addWeeks(baseDate, 1)
-             else if (freq === 'BIWEEKLY') nextDate = addWeeks(baseDate, 2)
-             else if (freq === 'MONTHLY') nextDate = addMonths(baseDate, 1)
-             else if (freq === 'QUARTERLY') nextDate = addMonths(baseDate, 3)
-             else if (freq === 'YEARLY') nextDate = addMonths(baseDate, 12)
-             else if (freq === 'CUSTOM' && instance.chore.customInterval) nextDate = addDays(baseDate, instance.chore.customInterval)
-
              await prisma.choreInstance.create({
                 data: {
                     choreId: instance.choreId,
                     assignedUserId: nextAssignee,
-                    dueDate: nextDate,
+                    dueDate: nextDate, 
                     status: 'PENDING'
                 }
             })
@@ -146,8 +162,6 @@ export async function toggleTask(instanceId: string, completed: boolean) {
                 completedAt: null
             }
         })
-        // TODO: Handle removing the generated next instance? 
-        // For now, ignore complex rollback.
     }
 
     revalidatePath('/')

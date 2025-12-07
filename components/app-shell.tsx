@@ -11,7 +11,8 @@ import { UserSwitcher } from '@/components/user-switcher'
 import { useCurrentUser } from '@/app/providers'
 import { CalendarView } from '@/components/calendar-view'
 import { SettingsDashboard } from '@/components/settings-dashboard'
-import { Home, Calendar as CalendarIcon, DollarSign, Settings } from 'lucide-react'
+import { Leaderboard } from '@/components/leaderboard'
+import { Home, Calendar as CalendarIcon, DollarSign, Settings, Trophy } from 'lucide-react'
 
 
 export function AppShell({ initialUsers }: { initialUsers: User[] }) {
@@ -77,7 +78,7 @@ export function AppShell({ initialUsers }: { initialUsers: User[] }) {
                         <Home size={16} className="text-white" />
                     </div>
                      <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                        Household
+                        Household Planner
                     </span>
                 </div>
                 <UserSwitcher users={initialUsers} />
@@ -100,6 +101,11 @@ export function AppShell({ initialUsers }: { initialUsers: User[] }) {
                             <Finances users={initialUsers} />
                         </motion.div>
                      </TabsContent>
+                     <TabsContent value="leaderboard" className="mt-0 focus-visible:ring-0">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+                            <Leaderboard />
+                        </motion.div>
+                     </TabsContent>
                      <TabsContent value="settings" className="mt-0 focus-visible:ring-0">
                         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
                             <SettingsDashboard />
@@ -110,13 +116,14 @@ export function AppShell({ initialUsers }: { initialUsers: User[] }) {
                      <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50">
                         <div className="bg-black/40 backdrop-blur-2xl border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl shadow-black/50 ring-1 ring-white/5">
                             <TabsList className="bg-transparent border-0 p-0 h-auto gap-2">
-                                 {['tasks', 'calendar', 'finance', 'settings'].map((tab) => {
-                                     const iconMap: any = { tasks: Home, calendar: CalendarIcon, finance: DollarSign, settings: Settings }
+                                 {['tasks', 'calendar', 'finance', 'leaderboard', 'settings'].map((tab) => {
+                                     const iconMap: any = { tasks: Home, calendar: CalendarIcon, finance: DollarSign, leaderboard: Trophy, settings: Settings }
                                      const Icon = iconMap[tab]
                                      const colorMap: any = { 
                                          tasks: 'data-[state=active]:bg-blue-600', 
                                          calendar: 'data-[state=active]:bg-purple-600', 
                                          finance: 'data-[state=active]:bg-emerald-600', 
+                                         leaderboard: 'data-[state=active]:bg-yellow-600',
                                          settings: 'data-[state=active]:bg-zinc-700' 
                                      }
                                      return (

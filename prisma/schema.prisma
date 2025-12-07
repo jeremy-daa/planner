@@ -10,10 +10,20 @@ generator client {
 model User {
   id        String   @id @default(uuid())
   name      String
-  avatar    String?
-  color     String?  // hex code
-  notifTime String?  @default("09:00") // Preferred time for daily reminders (HH:MM)
-  createdAt DateTime @default(now())
+  avatar          String?
+  color           String?  // hex code
+  notifTime       String?  @default("09:00") // Preferred time for daily reminders (HH:MM)
+  
+  // Gamification
+  points          Int      @default(0)
+  level           Int      @default(1)
+  streak          Int      @default(0)
+  lastCompletedAt DateTime?
+
+  // Notifications
+  pushSubscriptions PushSubscription[]
+
+  createdAt       DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   assignedChoreInstances ChoreInstance[]
@@ -117,4 +127,14 @@ enum TransferStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
 }

@@ -1,16 +1,18 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useCurrentUser } from '@/app/providers'
 import { updateUserProfile } from '@/app/actions/user'
+import { subscribeUser, sendTestNotification, unsubscribeUser } from '@/app/actions/notifications'
 import { toast } from 'sonner'
-import { Check } from 'lucide-react'
+import { Check, Bell, BellOff } from 'lucide-react'
 
-// Curated list of cool avatar URLs (using multiavatar api or DiceBear for deterministic but cool avatars)
-// For "pre available", we can use static paths or a service. 
-// Let's use DiceBear 'adventurer' style for "cool" looks.
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+if (typeof window !== 'undefined') console.log('Client VAPID Public Key starts with:', VAPID_PUBLIC_KEY?.substring(0, 5))
+
+// Curated list of cool avatar URLs 
 const AVATAR_OPTIONS = [
     // Local Avatars
     '/avatars/andy-warhol.svg',
@@ -58,33 +60,149 @@ const COLOR_OPTIONS = [
     '#ec4899', // pink
 ]
 
+// Helper to Convert UTC "HH:MM" to Local "HH:MM"
+function utcToLocal(utcTime: string) {
+    if (!utcTime) return '09:00'
+    const [h, m] = utcTime.split(':').map(Number)
+    const date = new Date()
+    date.setUTCHours(h, m, 0, 0)
+    const localH = date.getHours().toString().padStart(2, '0')
+    const localM = date.getMinutes().toString().padStart(2, '0')
+    return `${localH}:${localM}`
+}
+
+// Helper to Convert Local "HH:MM" to UTC "HH:MM"
+function localToUtc(localTime: string) {
+    if (!localTime) return '09:00'
+    const [h, m] = localTime.split(':').map(Number)
+    const date = new Date()
+    date.setHours(h, m, 0, 0)
+    const utcH = date.getUTCHours().toString().padStart(2, '0')
+    const utcM = date.getUTCMinutes().toString().padStart(2, '0')
+    return `${utcH}:${utcM}`
+}
+
 export function UserProfile() {
     const { user, setUser } = useCurrentUser()
     const [selectedAvatar, setSelectedAvatar] = useState(user?.avatar || AVATAR_OPTIONS[0])
     const [selectedColor, setSelectedColor] = useState(user?.color || COLOR_OPTIONS[0])
+    // Initialize with Local Time derived from Stored UTC Time
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [notifTime, setNotifTime] = useState((user as any)?.notifTime || '09:00')
+    const [notifTime, setNotifTime] = useState(utcToLocal((user as any)?.notifTime || '09:00'))
     const [loading, setLoading] = useState(false)
+    const [isSubscribed, setIsSubscribed] = useState(false)
+
+    useEffect(() => {
+        if ('serviceWorker' in navigator && user) {
+            navigator.serviceWorker.ready.then(reg => {
+                reg.pushManager.getSubscription().then(sub => {
+                    if (sub) setIsSubscribed(true)
+                })
+            })
+        }
+    }, [user])
 
     if (!user) return <div className="p-4 text-center text-gray-500">Please select a user first to edit profile.</div>
 
     async function handleSave() {
         setLoading(true)
         try {
+            // Convert to UTC before saving
+            const utcTime = localToUtc(notifTime)
+            
             await updateUserProfile(user!.id, {
                 avatar: selectedAvatar,
                 color: selectedColor,
-                notifTime
+                notifTime: utcTime
             })
-            // Update local state
+            // Update local state - keep 'notifTime' as local in UI state
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            setUser({ ...user!, avatar: selectedAvatar, color: selectedColor, notifTime } as any)
+            setUser({ ...user!, avatar: selectedAvatar, color: selectedColor, notifTime: utcTime } as any)
             toast.success('Profile updated!')
         } catch (e) {
             toast.error('Failed to update profile')
         } finally {
             setLoading(false)
         }
+    }
+
+    async function toggleNotifications() {
+        if (!('serviceWorker' in navigator)) {
+            toast.error('Service Workers not supported')
+            return
+        }
+
+        if (isSubscribed) {
+            // Unsubscribe
+            setLoading(true)
+            try {
+                const reg = await navigator.serviceWorker.ready
+                const sub = await reg.pushManager.getSubscription()
+                if (sub) {
+                    await sub.unsubscribe()
+                    await unsubscribeUser(user!.id)
+                    setIsSubscribed(false)
+                    toast.success('Notifications Disabled')
+                }
+            } catch (e) {
+                console.error(e)
+                toast.error('Failed to disable notifications')
+            } finally {
+                setLoading(false)
+            }
+        } else {
+            // Subscribe
+            try {
+                if (!VAPID_PUBLIC_KEY) {
+                    toast.error('VAPID Public Key is missing. Check .env and restart server.')
+                    return
+                }
+
+                const perm = await Notification.requestPermission()
+                if (perm !== 'granted') {
+                    toast.error('Notifications permission denied. Please enable in browser settings.')
+                    return
+                }
+
+                setLoading(true)
+                const register = await navigator.serviceWorker.register('/sw.js')
+                const registration = await navigator.serviceWorker.ready
+                
+                const sub = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                })
+
+                const res = await subscribeUser(sub.toJSON(), user!.id)
+                if (res.success) {
+                    setIsSubscribed(true)
+                    toast.success('Notifications Enabled!')
+                    await sendTestNotification(user!.id)
+                } else {
+                    toast.error('Failed to save subscription')
+                }
+            } catch (e) {
+                console.error(e)
+                toast.error('Failed to subscribe to push notifications')
+            } finally {
+                setLoading(false)
+            }
+        }
+    }
+
+    function urlBase64ToUint8Array(base64String: string) {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4)
+        const base64 = (base64String + padding)
+            .replace(/\-/g, '+')
+            .replace(/_/g, '/')
+        
+        const rawData = window.atob(base64)
+        const outputArray = new Uint8Array(rawData.length)
+        
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i)
+        }
+        return outputArray
     }
 
     return (
@@ -142,7 +260,19 @@ export function UserProfile() {
                             value={notifTime}
                             onChange={(e) => setNotifTime(e.target.value)}
                          />
-                         <span className="text-xs text-gray-500">We'll alert you about pending tasks at this time.</span>
+                         <span className="text-xs text-gray-500">We'll alert you about pending tasks at this Local Time.</span>
+                    </div>
+
+                    <div className="mt-2">
+                         <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={toggleNotifications} 
+                            className={`flex items-center gap-2 ${isSubscribed ? 'border-green-500/30 text-green-400 hover:bg-green-500/10' : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10'}`}
+                        >
+                            {isSubscribed ? <BellOff size={16}/> : <Bell size={16}/>}
+                            {isSubscribed ? 'Disable Push Notifications' : 'Enable Push Notifications'}
+                         </Button>
                     </div>
                 </div>
 
