@@ -10,7 +10,6 @@ import { toast } from 'sonner'
 import { Check, Bell, BellOff } from 'lucide-react'
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-if (typeof window !== 'undefined') console.log('Client VAPID Public Key starts with:', VAPID_PUBLIC_KEY?.substring(0, 5))
 
 // Curated list of cool avatar URLs 
 const AVATAR_OPTIONS = [
@@ -165,6 +164,7 @@ export function UserProfile() {
                 }
 
                 setLoading(true)
+                // Register Service Worker
                 const register = await navigator.serviceWorker.register('/sw.js')
                 const registration = await navigator.serviceWorker.ready
                 
@@ -177,13 +177,12 @@ export function UserProfile() {
                 if (res.success) {
                     setIsSubscribed(true)
                     toast.success('Notifications Enabled!')
-                    await sendTestNotification(user!.id)
                 } else {
-                    toast.error('Failed to save subscription')
+                    toast.error('Failed to save subscription to server')
                 }
             } catch (e) {
-                console.error(e)
-                toast.error('Failed to subscribe to push notifications')
+                console.error('Notification Error:', e)
+                toast.error(`Failed to enable notifications: ${(e as any).message}`)
             } finally {
                 setLoading(false)
             }

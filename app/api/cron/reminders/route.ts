@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server'
 
 // Configure VAPID for this route handler context
 if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
-    console.log('Server VAPID Public Key starts with:', process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY.substring(0, 5))
     webpush.setVapidDetails(
         'mailto:noreply@planner.com',
         process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
