@@ -73,14 +73,14 @@ export function AppShell({ initialUsers }: { initialUsers: User[] }) {
     return (
         <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#0a0a0a] to-black text-white font-sans pb-32">
             <header className="sticky top-0 z-50 px-6 py-4 bg-black/20 backdrop-blur-xl border-b border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+                <a href="/" className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                         <Home size={16} className="text-white" />
                     </div>
                      <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
                         Household Planner
                     </span>
-                </div>
+                </a>
                 <UserSwitcher users={initialUsers} />
             </header>
 
